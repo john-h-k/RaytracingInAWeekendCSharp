@@ -1,30 +1,24 @@
 ﻿// Image
-var aspectRatio = 16.0f / 9.0f;
-var imageWidth = 400;
-var imageHeight = (int)(imageWidth / aspectRatio);
-var samplesPerPixel = 100;
-var maxDepth = 50;
 
-// for (int i = 0; i < 50; i++)
-// {
-//     Console.WriteLine(Random.RandomSingle(-5, 5));
-// }
-// return;
+const double aspectRatio = 3.0 / 2.0;
+const int imageWidth = 1200;
+const int imageHeight = (int)(imageWidth / aspectRatio);
+const int samplesPerPixel = 500;
+const int maxDepth = 50;
 
 // World
-var world = new HittableList();
-var materialGround = new Lambertian(new Color(0.8f, 0.8f, 0.0f));
-var materialCenter = new Lambertian(new Color(0.7f, 0.3f, 0.3f));
-var materialLeft   = new Metal(new Color(0.8f, 0.8f, 0.8f));
-var materialRight  = new Metal(new Color(0.8f, 0.6f, 0.2f));
-
-world.Add(new Sphere(new Point3(0.0f, -100.5f, -1.0f), 100.0, materialGround));
-world.Add(new Sphere(new Point3(0.0f, 0.0f, -1.0f), 0.5, materialCenter));
-world.Add(new Sphere(new Point3(-1.0f, 0.0f, -1.0f), 0.5, materialLeft));
-world.Add(new Sphere(new Point3(1.0f, 0.0f, -1.0f), 0.5, materialRight));
+var world = RandomScene();
 
 // Camera
-var cam = new Camera();
+var lookFrom = new Point3(13, 2, 3);
+var lookAt = new Point3(0, 0, 0);
+var vUp = new Vector3(0, 1, 0);
+var distToFocus = 10.0;
+var aperture = 0.1;
+
+var cam = new Camera(lookFrom, lookAt, vUp, 20, aspectRatio, aperture, distToFocus);
+
+// Render
 
 Console.WriteLine("P3");
 
@@ -35,13 +29,13 @@ Console.WriteLine();
 
 Console.WriteLine("255");
 
-for (int j = imageHeight - 1; j >= 0; --j) 
+for (int j = imageHeight - 1; j >= 0; --j)
 {
     Console.Error.Write($"\rScanlines remaining: {j} ");
     Console.Error.Flush();
 
-    for (int i = 0; i < imageWidth; ++i) 
-    {   
+    for (int i = 0; i < imageWidth; ++i)
+    {
         var pixelColor = new Vector3(0, 0, 0);
         for (int s = 0; s < samplesPerPixel; ++s)
         {
@@ -50,7 +44,7 @@ for (int j = imageHeight - 1; j >= 0; --j)
             var r = cam.GetRay(u, v);
             pixelColor += RayColor(r, world, maxDepth);
         }
-        
+
         WriteColor(Console.Out, pixelColor, samplesPerPixel);
     }
 }
@@ -66,14 +60,15 @@ Color RayColor(Ray r, HittableList world, int depth)
     }
 
     HitRecord rec = default;
-    if (world.Hit(r, 0.001, double.PositiveInfinity, ref rec)) {
+    if (world.Hit(r, 0.001, double.PositiveInfinity, ref rec))
+    {
         Ray scattered = default;
         Color attenuation = default;
         if (rec.Mat.Scatter(r, rec, ref attenuation, ref scattered))
         {
             return attenuation * RayColor(scattered, world, depth - 1);
         }
-        return new Color(0,0,0);
+        return new Color(0, 0, 0);
     }
 
     var unitDirection = Vector3.Normalize(r.Direction);
@@ -86,7 +81,7 @@ void WriteColor(TextWriter @out, Color pixelColor, int samplesPerPixel)
     var r = pixelColor.X;
     var g = pixelColor.Y;
     var b = pixelColor.Z;
-    
+
     // Divide the color by the number of samples and gamma-correct for gamma=2.0.
     var scale = 1.0f / samplesPerPixel;
     r = MathF.Sqrt(scale * r);
@@ -100,4 +95,51 @@ void WriteColor(TextWriter @out, Color pixelColor, int samplesPerPixel)
     @out.Write(' ');
     @out.Write((int)(256 * Math.Clamp(b, 0.0f, 0.999f)));
     @out.WriteLine();
+}
+
+HittableList RandomScene()
+{
+    var world = new HittableList();
+
+    var groundMaterial = new Lambertian(new Color(0.5f, 0.5f, 0.5f));
+    world.Add(new Sphere(new Point3(0,-1000,0), 1000, groundMaterial));
+
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            var chooseMat = Random.RandomSingle();
+            var center = new Point3(a + (0.9f * Random.RandomSingle()), 0.2f, b + (0.9f * Random.RandomSingle()));
+
+            if ((center - new Point3(4, 0.2f, 0)).Length() > 0.9f) {
+                Material sphereMaterial;
+
+                if (chooseMat < 0.8) {
+                    // diffuse
+                    var albedo = Random.RandomVector3() * Random.RandomVector3();
+                    sphereMaterial = new Lambertian(albedo);
+                    world.Add(new Sphere(center, 0.2, sphereMaterial));
+                } else if (chooseMat < 0.95) {
+                    // metal
+                    var albedo = Random.RandomVector3(0.5f, 1);
+                    var fuzz = Random.RandomSingle(0, 0.5f);
+                    sphereMaterial = new Metal(albedo, fuzz);
+                    world.Add(new Sphere(center, 0.2, sphereMaterial));
+                } else {
+                    // glass
+                    sphereMaterial = new Dielectric(1.5);
+                    world.Add(new Sphere(center, 0.2, sphereMaterial));
+                }
+            }
+        }
+    }
+
+    var material1 = new Dielectric(1.5);
+    world.Add(new Sphere(new Point3(0, 1, 0), 1.0, material1));
+
+    var material2 = new Lambertian(new Color(0.4f, 0.2f, 0.1f));
+    world.Add(new Sphere(new Point3(-4, 1, 0), 1.0, material2));
+
+    var material3 = new Metal(new Color(0.7f, 0.6f, 0.5f), 0.0);
+    world.Add(new Sphere(new Point3(4, 1, 0), 1.0, material3));
+
+    return world;
 }
