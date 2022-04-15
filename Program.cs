@@ -13,8 +13,15 @@ var maxDepth = 50;
 
 // World
 var world = new HittableList();
-world.Add(new Sphere(new Point3(0, 0, -1), 0.5));
-world.Add(new Sphere(new Point3(0, -100.5f ,-1), 100));
+var materialGround = new Lambertian(new Color(0.8f, 0.8f, 0.0f));
+var materialCenter = new Lambertian(new Color(0.7f, 0.3f, 0.3f));
+var materialLeft   = new Metal(new Color(0.8f, 0.8f, 0.8f));
+var materialRight  = new Metal(new Color(0.8f, 0.6f, 0.2f));
+
+world.Add(new Sphere(new Point3(0.0f, -100.5f, -1.0f), 100.0, materialGround));
+world.Add(new Sphere(new Point3(0.0f, 0.0f, -1.0f), 0.5, materialCenter));
+world.Add(new Sphere(new Point3(-1.0f, 0.0f, -1.0f), 0.5, materialLeft));
+world.Add(new Sphere(new Point3(1.0f, 0.0f, -1.0f), 0.5, materialRight));
 
 // Camera
 var cam = new Camera();
@@ -54,12 +61,19 @@ Color RayColor(Ray r, HittableList world, int depth)
 {
     // If we've exceeded the ray bounce limit, no more light is gathered.
     if (depth <= 0)
+    {
         return new Color(0, 0, 0);
+    }
 
     HitRecord rec = default;
     if (world.Hit(r, 0.001, double.PositiveInfinity, ref rec)) {
-        var target = rec.P + rec.Normal + Random.RandomInUnitSphere();
-        return 0.5f * RayColor(new Ray(rec.P, target - rec.P), world, depth - 1);
+        Ray scattered = default;
+        Color attenuation = default;
+        if (rec.Mat.Scatter(r, rec, ref attenuation, ref scattered))
+        {
+            return attenuation * RayColor(scattered, world, depth - 1);
+        }
+        return new Color(0,0,0);
     }
 
     var unitDirection = Vector3.Normalize(r.Direction);

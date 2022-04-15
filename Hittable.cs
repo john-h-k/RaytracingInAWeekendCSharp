@@ -1,5 +1,5 @@
 
-public record struct HitRecord(Point3 P, Vector3 Normal, double T, bool FrontFace)
+public record struct HitRecord(Point3 P, Vector3 Normal, double T, bool FrontFace, Material Mat)
 {
     public void SetFaceNormal(in Ray r, Vector3 outwardNormal) {
         this.FrontFace = Vector3.Dot(r.Direction, outwardNormal) < 0;
@@ -12,7 +12,7 @@ public abstract record class Hittable
     public abstract bool Hit(in Ray r, double tMin, double tMax, ref HitRecord rec);
 }
 
-public sealed record class Sphere(Point3 Center, double Radius) : Hittable
+public sealed record class Sphere(Point3 Center, double Radius, Material Mat) : Hittable
 {
     public override bool Hit(in Ray r, double tMin, double tMax, ref HitRecord rec)
     {   
@@ -44,6 +44,7 @@ public sealed record class Sphere(Point3 Center, double Radius) : Hittable
         rec.P = r.At(rec.T);
         var outwardNormal = (rec.P - this.Center) / (float)this.Radius;
         rec.SetFaceNormal(r, outwardNormal);
+        rec.Mat = this.Mat;
 
         return true;
     }
