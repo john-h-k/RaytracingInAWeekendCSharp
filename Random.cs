@@ -1,7 +1,7 @@
 
 static class Random
 {
-    private readonly static System.Random random = new();
+    private readonly static System.Random random = System.Random.Shared;
 
     public static float RandomSingle()
         => (float)Random.random.NextSingle();

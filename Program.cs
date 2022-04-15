@@ -1,5 +1,7 @@
 ﻿// Image
 
+using System.Diagnostics;
+
 const double aspectRatio = 3.0 / 2.0;
 const int imageWidth = 1200;
 const int imageHeight = (int)(imageWidth / aspectRatio);
@@ -29,27 +31,58 @@ Console.WriteLine();
 
 Console.WriteLine("255");
 
+var stopwatch = Stopwatch.StartNew();
+
+var cores = Environment.ProcessorCount;
+var partitionSize = (imageWidth + (cores - 1)) / cores;
+
+var tasks = new Task[cores];
+
 for (int j = imageHeight - 1; j >= 0; --j)
 {
     Console.Error.Write($"\rScanlines remaining: {j} ");
     Console.Error.Flush();
 
-    for (int i = 0; i < imageWidth; ++i)
-    {
-        var pixelColor = new Vector3(0, 0, 0);
-        for (int s = 0; s < samplesPerPixel; ++s)
-        {
-            var u = (i + Random.RandomSingle()) / (imageWidth - 1);
-            var v = (j + Random.RandomSingle()) / (imageHeight - 1);
-            var r = cam.GetRay(u, v);
-            pixelColor += RayColor(r, world, maxDepth);
-        }
+    var scanline = new Color[imageWidth];
 
-        WriteColor(Console.Out, pixelColor, samplesPerPixel);
+    for (var partitionIndex = 0; partitionIndex < cores; partitionIndex++)
+    {
+        var row = j;
+        var partition = partitionIndex;
+
+        tasks[partition] = Task.Run(() => {
+            var start = partition * partitionSize;
+            var end = Math.Min(start + partitionSize, imageWidth);
+
+            var length = end - start;
+
+            for (int i = 0; i < length; ++i)
+            {
+                var pixelColor = new Vector3(0, 0, 0);
+
+                for (int s = 0; s < samplesPerPixel; ++s)
+                {
+                    var u = (start + i + Random.RandomSingle()) / (imageWidth - 1);
+                    var v = (row + Random.RandomSingle()) / (imageHeight - 1);
+                    var r = cam.GetRay(u, v);
+                    pixelColor += RayColor(r, world, maxDepth);
+                }
+
+                scanline[start + i] += pixelColor;
+            }
+        });
+    }
+
+    await Task.WhenAll(tasks);
+
+    foreach (var pixel in scanline)
+    {
+        WriteColor(Console.Out, pixel, samplesPerPixel);
     }
 }
 
 Console.Error.WriteLine("\nDone.");
+Console.Error.WriteLine($"Render took {stopwatch.Elapsed.TotalSeconds}s");
 
 Color RayColor(Ray r, HittableList world, int depth)
 {
