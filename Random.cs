@@ -1,13 +1,16 @@
 
 static class Random
 {
-    private readonly static System.Random random = System.Random.Shared;
+    private static System.Random random = System.Random.Shared;
 
     public static float RandomSingle()
-        => (float)Random.random.NextSingle();
+        => Random.random.NextSingle();
 
     public static float RandomSingle(float lo, float hi)
         => lo + ((hi - lo) * Random.random.NextSingle());
+
+    public static float RandomInt32(int lo, int hi)
+        => Random.random.Next(lo, hi);
 
     public static Vector3 RandomVector3()
         => new Vector3(RandomSingle(), RandomSingle(), RandomSingle());

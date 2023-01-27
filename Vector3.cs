@@ -4,6 +4,7 @@ public static class Vector3Extensions
     {
         // Return true if the vector is close to zero in all dimensions.
         var s = 1e-8;
-        return (MathF.Abs(@this.X) < s) && (MathF.Abs(@this.Y) < s) && (MathF.Abs(@this.Z) < s);
+        @this = Vector3.Abs(@this);
+        return (@this.X < s) && (@this.Y < s) && (@this.Z < s);
     }
 }

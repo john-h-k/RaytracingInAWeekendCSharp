@@ -2,7 +2,7 @@ public abstract record class Material
 {
     public abstract bool Scatter(Ray rIn, in HitRecord rec, ref Color attenuation, ref Ray scattered);
 
-    public static Vector3 Refract(Vector3 uv, Vector3 n, double etaiOverEtat)
+    public static Vector3 Refract(Vector3 uv, Vector3 n, float etaiOverEtat)
     {
         var cosTheta = MathF.Min(Vector3.Dot(-uv, n), 1.0f);
         var rOutPerp = (float)etaiOverEtat * (uv + (cosTheta * n));
@@ -23,29 +23,28 @@ public record class Lambertian(Color Albedo) : Material
             scatterDirection = rec.Normal;
         }
 
-
-        scattered = new Ray(rec.P, scatterDirection);
+        scattered = new Ray(rec.Point, scatterDirection);
         attenuation = this.Albedo;
         return true;
     }
 }
 
-public record class Metal(Color Albedo, double Fuzz) : Material
+public record class Metal(Color Albedo, float Fuzz) : Material
 {
-    private double _fuzz = Fuzz;
+    private float _fuzz = Fuzz;
 
-    public double Fuzz { get => Math.Min(_fuzz, 1); init => _fuzz = value; }
+    public float Fuzz { get => Math.Min(_fuzz, 1); init => _fuzz = value; }
 
     public override bool Scatter(Ray rIn, in HitRecord rec, ref Color attenuation, ref Ray scattered)
     {
         var reflected = Vector3.Reflect(Vector3.Normalize(rIn.Direction), rec.Normal);
-        scattered = new Ray(rec.P, reflected + ((float)this.Fuzz * Random.RandomInUnitSphere()));
+        scattered = new Ray(rec.Point, reflected + ((float)this.Fuzz * Random.RandomInUnitSphere()));
         attenuation = this.Albedo;
         return Vector3.Dot(scattered.Direction, rec.Normal) > 0;
     }
 };
 
-public record class Dielectric(double Ir) : Material
+public record class Dielectric(float Ir) : Material
 {
     public override bool Scatter(Ray rIn, in HitRecord rec, ref Color attenuation, ref Ray scattered)
     {
@@ -68,15 +67,15 @@ public record class Dielectric(double Ir) : Material
             direction = Refract(unitDirection, rec.Normal, refractionRatio);
         }
 
-        scattered = new Ray(rec.P, direction);
+        scattered = new Ray(rec.Point, direction);
         return true;
     }
 
-    private static double reflectance(double cosine, double refIdx)
+    private static float reflectance(float cosine, float refIdx)
     {
         // Use Schlick's approximation for reflectance.
         var r0 = (1 - refIdx) / (1 + refIdx);
         r0 = r0 * r0;
-        return r0 + ((1 - r0) * Math.Pow(1 - cosine, 5));
+        return r0 + ((1 - r0) * MathF.Pow(1 - cosine, 5));
     }
 };
