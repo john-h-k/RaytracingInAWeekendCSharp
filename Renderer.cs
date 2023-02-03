@@ -89,7 +89,6 @@ public class Renderer
         }
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     private void RenderPixel(int x, int y)
     {
         var pixelColor = Vector3.Zero;
@@ -106,26 +105,13 @@ public class Renderer
         color.FromVector4(this.Image[x, y].ToVector4() + ConvertToColorspace(pixelColor, this.RenderParameters.SamplesPerPixel));
         this.Image[x, y] = color;
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
         static Vector4 ConvertToColorspace(Color pixelColor, int samplesPerPixel)
         {
-            var r = pixelColor.X;
-            var g = pixelColor.Y;
-            var b = pixelColor.Z;
-
             // Divide the color by the number of samples and gamma-correct for gamma=2.0.
             var scale = 1.0f / samplesPerPixel;
-            r = MathF.Sqrt(scale * r);
-            g = MathF.Sqrt(scale * g);
-            b = MathF.Sqrt(scale * b);
+            var scaled = Vector3.Clamp(Vector3.SquareRoot(scale * pixelColor), Vector3.Zero, new Vector3(0.999f));
 
-            // Write the translated [0,255] value of each color component.
-            return new Vector4(
-                Math.Clamp(r, 0.0f, 0.999f),
-                Math.Clamp(g, 0.0f, 0.999f),
-                Math.Clamp(b, 0.0f, 0.999f),
-                1
-            );
+            return new Vector4(scaled, 1);
         }
     }
 
