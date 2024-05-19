@@ -4,8 +4,9 @@ static class Random
     // private static System.Random random = System.Random.Shared;
 
     [ThreadStatic]
-    private static System.Random random;
-
+    private static System.Random random = null!;
+    
+    // Hacky, but faster
     public static void Initialize() => random = new();
 
     public static float RandomSingle()
