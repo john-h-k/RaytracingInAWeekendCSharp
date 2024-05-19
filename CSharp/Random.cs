@@ -1,7 +1,12 @@
 
 static class Random
 {
-    private static System.Random random = System.Random.Shared;
+    // private static System.Random random = System.Random.Shared;
+
+    [ThreadStatic]
+    private static System.Random random;
+
+    public static void Initialize() => random = new();
 
     public static float RandomSingle()
         => Random.random.NextSingle();

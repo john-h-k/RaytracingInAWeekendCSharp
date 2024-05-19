@@ -1,6 +1,8 @@
 
 using SixLabors.ImageSharp;
 
+Random.Initialize();
+
 // Image
 var parameters = new RenderParameters
 {

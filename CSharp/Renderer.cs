@@ -68,6 +68,8 @@ public class Renderer
     
     private void RenderWorker()
     {
+        Random.Initialize();
+
         for (var i = 0; i < int.MaxValue; i++)
         {
             if (!_blocks.TryDequeue(out var block))
