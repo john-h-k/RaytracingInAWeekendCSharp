@@ -45,6 +45,9 @@ public static partial class Scenes
         var material3 = new Metal(new Color(0.7f, 0.6f, 0.5f), 0.0f);
         world.Add(new Sphere(new Point3(4, 1, 0), 1.0f, material3));
 
-        return BoundingVolumeNode.Create<MidpointSplitStrategy>(world.ToArray()).Linearize();
+        // return BoundingVolumeNode.Create<MidpointSplitStrategy>(world.ToArray()).Linearize();
+        return BoundingVolumeNode.Create<EqualSubsetSplitStrategy>(world.ToArray()).Linearize();
+        // return BoundingVolumeNode.Create<MidpointSplitStrategy>(world.ToArray()).Linearize();
+        // return BoundingVolumeNode.Create<>(world.ToArray()).Linearize();
     }
 }

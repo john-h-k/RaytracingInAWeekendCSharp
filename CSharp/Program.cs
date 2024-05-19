@@ -22,11 +22,7 @@ var aperture = 0.1f;
 
 var camera = new Camera(lookFrom, lookAt, vUp, 20, (float)parameters.Width / parameters.Height, aperture, distToFocus);
 
-var renderer = new Renderer(parameters)
-{
-    Camera = camera,
-    World = world
-};
+var renderer = new Renderer(parameters, camera, world);
 
 var result = renderer.Render();
 

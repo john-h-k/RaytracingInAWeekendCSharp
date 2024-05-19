@@ -1,5 +1,5 @@
 ﻿// Image
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using SixLabors.ImageSharp;
@@ -14,33 +14,37 @@ public class Renderer
     public Camera Camera;
     public Image<RgbaVector> Image;
     public LinearizedBoundingVolumeHierarchy World;
-    private ConcurrentQueue<Block> blocks;
+    private Queue<Block> _blocks = new();
 
-    public Renderer(RenderParameters renderParameters)
+    public Renderer(RenderParameters renderParameters, Camera camera, LinearizedBoundingVolumeHierarchy world)
     {
         this.RenderParameters = renderParameters;
+        this.Camera = camera;
+        this.World = world;
+        this.Image = new Image<RgbaVector>(this.RenderParameters.Width, this.RenderParameters.Height);
     }
 
     private readonly record struct Block(int Left, int Right, int Bottom, int Top);
 
     public RenderResult Render()
     {
+        _blocks.Clear();
+
         // Render
         var stopwatch = Stopwatch.StartNew();
 
         const int blockSize = 25;
-        this.Image = new Image<RgbaVector>(this.RenderParameters.Width, this.RenderParameters.Height);
-        this.blocks = new ConcurrentQueue<Block>();
+        _blocks = new Queue<Block>();
 
-        for (var j = 0; j < this.RenderParameters.Height; j += blockSize)
+        for (var j = 0; j < RenderParameters.Height; j += blockSize)
         {
-            for (var i = 0; i < this.RenderParameters.Width; i += blockSize)
+            for (var i = 0; i < RenderParameters.Width; i += blockSize)
             {
-                this.blocks.Enqueue(new Block(
+                _blocks.Enqueue(new Block(
                     Left: i,
-                    Right: Math.Min(this.RenderParameters.Width, i + blockSize),
+                    Right: Math.Min(RenderParameters.Width, i + blockSize),
                     Bottom: j,
-                    Top: Math.Min(this.RenderParameters.Height, j + blockSize)
+                    Top: Math.Min(RenderParameters.Height, j + blockSize)
                 ));
             }
         }
@@ -52,7 +56,7 @@ public class Renderer
 
         for (var core = 0; core < cores; core++)
         {
-            tasks[core] = Task.Run(this.RenderWorker);
+            tasks[core] = Task.Run(RenderWorker);
         }
 
         Task.WhenAll(tasks).Wait();
@@ -66,18 +70,18 @@ public class Renderer
     {
         for (var i = 0; i < int.MaxValue; i++)
         {
-            if (!this.blocks.TryDequeue(out var block))
+            if (!_blocks.TryDequeue(out var block))
             {
                 return;
             }
 
-            Console.Error.Write($"{this.blocks.Count} blocks remaining... \r");
+            Console.Error.Write($"{this._blocks.Count} blocks remaining... \r");
 
             this.RenderBlock(block);
         }
+
     }
 
-    [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
     private void RenderBlock(Block block)
     {
         for (var y = block.Bottom; y < block.Top; y++)
@@ -93,17 +97,17 @@ public class Renderer
     {
         var pixelColor = Vector3.Zero;
 
-        for (int s = 0; s < this.RenderParameters.SamplesPerPixel; s++)
+        for (int s = 0; s < RenderParameters.SamplesPerPixel; s++)
         {
-            var u = (x + Random.RandomSingle()) / (this.RenderParameters.Width - 1);
-            var v = ((this.RenderParameters.Height - y) + Random.RandomSingle()) / (this.RenderParameters.Height - 1);
-            var r = this.Camera.GetRay(u, v);
-            pixelColor += RayColor(r, this.World, this.RenderParameters.MaxDepth);
+            var u = (x + Random.RandomSingle()) / (RenderParameters.Width - 1);
+            var v = ((RenderParameters.Height - y) + Random.RandomSingle()) / (RenderParameters.Height - 1);
+            var r = Camera.GetRay(u, v);
+            pixelColor += RayColor(r, World, RenderParameters.MaxDepth);
         }
 
         var color = new RgbaVector();
-        color.FromVector4(this.Image[x, y].ToVector4() + ConvertToColorspace(pixelColor, this.RenderParameters.SamplesPerPixel));
-        this.Image[x, y] = color;
+        color.FromVector4(Image[x, y].ToVector4() + ConvertToColorspace(pixelColor, RenderParameters.SamplesPerPixel));
+        Image[x, y] = color;
 
         static Vector4 ConvertToColorspace(Color pixelColor, int samplesPerPixel)
         {
