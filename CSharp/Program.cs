@@ -11,7 +11,22 @@ var parameters = new RenderParameters
 };
 
 // World
-var world = Scenes.Spheres();
+
+bool useEqSubset = false;
+
+
+LinearizedBoundingVolumeHierarchy world;
+
+if (useEqSubset)
+{
+    Console.Error.WriteLine($"Using {nameof(EqualSubsetSplitStrategy)}");
+    world = Scenes.Spheres<EqualSubsetSplitStrategy>();
+}
+else
+{
+    Console.Error.WriteLine($"Using {nameof(MidpointSplitStrategy)}");
+    world = Scenes.Spheres<MidpointSplitStrategy>();
+}
 
 // Camera
 var lookFrom = new Point3(13, 2, 3);
